@@ -27,11 +27,18 @@ import java.util.List;
 
 import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
 import io.acrosafe.wallet.btc.domain.TransactionRecord;
+import io.acrosafe.wallet.btc.exception.FeeRecordNotFoundException;
+import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
+import io.acrosafe.wallet.btc.util.Passphrase;
+import io.acrosafe.wallet.btc.web.rest.request.SendCoinRequest;
 import io.acrosafe.wallet.btc.web.rest.response.GetTransactionListResponse;
 import io.acrosafe.wallet.btc.web.rest.response.GetTransactionResponse;
+import io.acrosafe.wallet.btc.web.rest.response.SendCoinResponse;
 import io.acrosafe.wallet.btc.web.rest.response.TransactionOutput;
 import io.acrosafe.wallet.core.btc.TransactionType;
+import io.acrosafe.wallet.core.btc.exception.RequestAlreadySignedException;
 import io.acrosafe.wallet.core.btc.util.WalletUtils;
+import org.bitcoinj.core.InsufficientMoneyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -353,6 +360,79 @@ public class WalletResources
         catch (Throwable e)
         {
             logger.error("failed to get transaction.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{walletId}/send")
+    public ResponseEntity<SendCoinResponse> send(@PathVariable String walletId, @RequestBody SendCoinRequest request)
+    {
+        SendCoinResponse response = new SendCoinResponse();
+
+        try
+        {
+            Passphrase passphrase =
+                    request.getUsingBackupSigner() ? request.getBackupSigningKeyPassphrase() : request.getSigningKeyPassphrase();
+            String id = service.send(walletId, request.getSymbol(), request.getRecipients(), passphrase,
+                    request.getNumberOfBlock(), request.getUsingBackupSigner(), request.getMemo(), request.getInternalId());
+
+            response.setTransactionId(id);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InvalidCoinSymbolException e)
+        {
+            response.setResultCode(Result.INVALID_COIN_SYMBOL.getCode());
+            response.setResult(Result.INVALID_COIN_SYMBOL);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InvalidRecipientException e)
+        {
+            response.setResultCode(Result.INVALID_RECIPIENT.getCode());
+            response.setResult(Result.INVALID_RECIPIENT);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InsufficientMoneyException e)
+        {
+            response.setResultCode(Result.INSUFFICIENT_BALANCE.getCode());
+            response.setResult(Result.INSUFFICIENT_BALANCE);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (FeeRecordNotFoundException e)
+        {
+            response.setResultCode(Result.INVALID_FEE_INFORMATION.getCode());
+            response.setResult(Result.INVALID_FEE_INFORMATION);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (CryptoException e)
+        {
+            response.setResultCode(Result.INVALID_CRYPTO_OPERATION.getCode());
+            response.setResult(Result.INVALID_CRYPTO_OPERATION);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (RequestAlreadySignedException e)
+        {
+            response.setResultCode(Result.TRANSACTION_SIGNING_FAILED.getCode());
+            response.setResult(Result.TRANSACTION_SIGNING_FAILED);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to send coin.", e);
             response.setResultCode(Result.UNKNOWN_ERROR.getCode());
             response.setResult(Result.UNKNOWN_ERROR);
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
