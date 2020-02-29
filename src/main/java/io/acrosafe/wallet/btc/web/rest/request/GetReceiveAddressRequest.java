@@ -21,18 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.acrosafe.wallet.btc.repository;
+package io.acrosafe.wallet.btc.web.rest.request;
 
-import java.util.List;
-import java.util.Optional;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
-
-public interface TransactionOutputRecordRepository extends JpaRepository<TransactionOutputRecord, Long>
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class GetReceiveAddressRequest
 {
-    List<TransactionOutputRecord> findAllByTransactionId(String transactionId);
-    Optional<TransactionOutputRecord> findFirstByTransactionIdAndOutputIndex(String transactionId, Integer outputIndex);
+    @JsonProperty("symbol")
+    private String symbol;
 
+    @JsonProperty("label")
+    private String label;
+
+    public String getSymbol()
+    {
+        return symbol;
+    }
+
+    public void setSymbol(String symbol)
+    {
+        this.symbol = symbol;
+    }
+
+    public String getLabel()
+    {
+        return label;
+    }
+
+    public void setLabel(String label)
+    {
+        this.label = label;
+    }
 }

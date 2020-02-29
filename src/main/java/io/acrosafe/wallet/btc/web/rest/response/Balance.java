@@ -21,18 +21,36 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.acrosafe.wallet.btc.repository;
+package io.acrosafe.wallet.btc.web.rest.response;
 
-import java.util.List;
-import java.util.Optional;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
-
-public interface TransactionOutputRecordRepository extends JpaRepository<TransactionOutputRecord, Long>
+public class Balance
 {
-    List<TransactionOutputRecord> findAllByTransactionId(String transactionId);
-    Optional<TransactionOutputRecord> findFirstByTransactionIdAndOutputIndex(String transactionId, Integer outputIndex);
+    @JsonProperty("estimated")
+    private String estimated;
+
+    @JsonProperty("available")
+    private String available;
+
+    public String getEstimated()
+    {
+        return estimated;
+    }
+
+    public void setEstimated(String estimated)
+    {
+        this.estimated = estimated;
+    }
+
+    public String getAvailable()
+    {
+        return available;
+    }
+
+    public void setAvailable(String available)
+    {
+        this.available = available;
+    }
 
 }

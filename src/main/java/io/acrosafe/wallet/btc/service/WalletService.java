@@ -1,3 +1,26 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2020 acrosafe technologies
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package io.acrosafe.wallet.btc.service;
 
 import java.time.Instant;
@@ -38,15 +61,18 @@ import io.acrosafe.wallet.btc.config.ApplicationProperties;
 import io.acrosafe.wallet.btc.domain.AddressRecord;
 import io.acrosafe.wallet.btc.domain.WalletRecord;
 import io.acrosafe.wallet.btc.exception.CryptoException;
+import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
 import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
 import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
+import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.repository.AddressRecordRepository;
 import io.acrosafe.wallet.btc.repository.WalletRecordRepository;
 import io.acrosafe.wallet.btc.util.CryptoUtils;
 import io.acrosafe.wallet.btc.util.Passphrase;
 import io.acrosafe.wallet.core.btc.BlockChainNetwork;
 import io.acrosafe.wallet.core.btc.MultisigWallet;
+import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
 import io.acrosafe.wallet.core.btc.SeedGenerator;
 import io.acrosafe.wallet.core.btc.util.IDGenerator;
 
@@ -238,6 +264,67 @@ public class WalletService
         logger.info("new multisig wallet created. id = {}, createdDate = {}", id, createdDate);
 
         return walletRecord;
+    }
+
+    @Transactional
+    public MultisigWalletBalance getBalance(String walletId) throws ServiceNotReadyException, WalletNotFoundException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        MultisigWallet wallet = this.blockChainNetwork.getWallet(walletId);
+        if (wallet == null)
+        {
+            throw new WalletNotFoundException("wallet doesn't exist. id = " + walletId);
+        }
+
+        MultisigWalletBalance balance = wallet.getWalletBalance();
+        return balance;
+    }
+
+    @Transactional
+    public synchronized AddressRecord refreshReceivingAddress(String walletId, String coinSymbol, String label)
+            throws WalletNotFoundException, ServiceNotReadyException, InvalidCoinSymbolException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        MultisigWallet wallet = this.blockChainNetwork.getWallet(walletId);
+        if (wallet == null)
+        {
+            throw new WalletNotFoundException("failed to find wallet. id = " + walletId);
+        }
+
+        if (StringUtils.isEmpty(coinSymbol) || !coinSymbol.equalsIgnoreCase(COIN_SYMBOL))
+        {
+            throw new InvalidCoinSymbolException("coin symbol is not valid.");
+        }
+
+        Address address = wallet.freshReceiveAddress();
+        AddressRecord record = this.addressRecordRepository.findById(address.toString()).orElse(null);
+        while (record != null)
+        {
+            address = wallet.freshReceiveAddress();
+            record = this.addressRecordRepository.findById(address.toString()).orElse(null);
+        }
+
+        logger.info("new receiving address generated. address = {}", address.toString());
+        wallet.addWatchedAddress(address);
+
+        AddressRecord addressRecord = new AddressRecord();
+        addressRecord.setCreatedDate(Instant.now());
+        addressRecord.setWalletId(walletId);
+        addressRecord.setChangeAddress(false);
+        addressRecord.setReceiveAddress(address.toString());
+        addressRecord.setLabel(label);
+
+        this.addressRecordRepository.save(addressRecord);
+
+        return addressRecord;
     }
 
     private DownloadProgressTracker createDownloadProgressListener() throws BlockStoreException

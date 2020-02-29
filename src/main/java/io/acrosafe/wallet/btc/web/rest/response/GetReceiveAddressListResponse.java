@@ -21,18 +21,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.acrosafe.wallet.btc.repository;
+package io.acrosafe.wallet.btc.web.rest.response;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
-
-public interface TransactionOutputRecordRepository extends JpaRepository<TransactionOutputRecord, Long>
+public class GetReceiveAddressListResponse extends Response
 {
-    List<TransactionOutputRecord> findAllByTransactionId(String transactionId);
-    Optional<TransactionOutputRecord> findFirstByTransactionIdAndOutputIndex(String transactionId, Integer outputIndex);
+    @JsonProperty("wallet_id")
+    private String walletId;
 
+    @JsonProperty("addresses")
+    private List<GetReceiveAddressResponse> addressList;
+
+    public String getWalletId()
+    {
+        return walletId;
+    }
+
+    public void setWalletId(String walletId)
+    {
+        this.walletId = walletId;
+    }
+
+    public List<GetReceiveAddressResponse> getAddressList()
+    {
+        return addressList;
+    }
+
+    public void setAddressList(List<GetReceiveAddressResponse> addressList)
+    {
+        this.addressList = addressList;
+    }
+
+    public void addAddress(GetReceiveAddressResponse address)
+    {
+        if (addressList == null)
+        {
+            addressList = new ArrayList<>();
+        }
+
+        addressList.add(address);
+    }
 }

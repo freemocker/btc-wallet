@@ -1,23 +1,56 @@
+/**
+ * MIT License
+ *
+ * Copyright (c) 2020 acrosafe technologies
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package io.acrosafe.wallet.btc.web.rest;
 
+import io.acrosafe.wallet.btc.web.rest.response.Balance;
+import io.acrosafe.wallet.btc.web.rest.response.GetWalletResponse;
+import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import io.acrosafe.wallet.btc.domain.AddressRecord;
 import io.acrosafe.wallet.btc.domain.WalletRecord;
 import io.acrosafe.wallet.btc.exception.CryptoException;
+import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
 import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
 import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
+import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.service.WalletService;
 import io.acrosafe.wallet.btc.web.rest.request.CreateWalletRequest;
+import io.acrosafe.wallet.btc.web.rest.request.GetReceiveAddressRequest;
 import io.acrosafe.wallet.btc.web.rest.response.CreateWalletResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetReceiveAddressResponse;
 import io.acrosafe.wallet.btc.web.rest.response.Result;
 
 @Controller
@@ -75,6 +108,84 @@ public class WalletResources
         catch (Throwable e)
         {
             logger.error("failed to create new wallet.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{walletId}/address/new")
+    public ResponseEntity<GetReceiveAddressResponse> freshReceiveAddress(@PathVariable String walletId,
+            @RequestBody GetReceiveAddressRequest request)
+    {
+        GetReceiveAddressResponse response = new GetReceiveAddressResponse();
+        try
+        {
+            AddressRecord addressRecord = this.service.refreshReceivingAddress(walletId, request.getSymbol(), request.getLabel());
+            response.setAddress(addressRecord.getReceiveAddress());
+            response.setLabel(addressRecord.getLabel());
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        }
+        catch (InvalidCoinSymbolException e)
+        {
+            response.setResultCode(Result.INVALID_COIN_SYMBOL.getCode());
+            response.setResult(Result.INVALID_COIN_SYMBOL);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to create new receive address.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{walletId}/balance")
+    public ResponseEntity<GetWalletResponse> getBalance(@PathVariable String walletId)
+    {
+        GetWalletResponse response = new GetWalletResponse();
+        try
+        {
+            MultisigWalletBalance multisigWalletBalance = this.service.getBalance(walletId);
+
+            Balance balance = new Balance();
+            balance.setAvailable(multisigWalletBalance.getAvailable());
+            balance.setEstimated(multisigWalletBalance.getEstimated());
+
+            response.setId(walletId);
+            response.setBalance(balance);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to get wallet balance.", e);
             response.setResultCode(Result.UNKNOWN_ERROR.getCode());
             response.setResult(Result.UNKNOWN_ERROR);
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
