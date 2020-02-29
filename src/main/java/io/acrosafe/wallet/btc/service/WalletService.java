@@ -23,11 +23,14 @@
  */
 package io.acrosafe.wallet.btc.service;
 
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
 
@@ -35,7 +38,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionConfidence;
+import org.bitcoinj.core.TransactionOutput;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -63,6 +70,8 @@ import com.google.common.collect.ImmutableList;
 
 import io.acrosafe.wallet.btc.config.ApplicationProperties;
 import io.acrosafe.wallet.btc.domain.AddressRecord;
+import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
+import io.acrosafe.wallet.btc.domain.TransactionRecord;
 import io.acrosafe.wallet.btc.domain.WalletRecord;
 import io.acrosafe.wallet.btc.exception.CryptoException;
 import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
@@ -71,14 +80,20 @@ import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
 import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.repository.AddressRecordRepository;
+import io.acrosafe.wallet.btc.repository.TransactionOutputRecordRepository;
+import io.acrosafe.wallet.btc.repository.TransactionRecordRepository;
 import io.acrosafe.wallet.btc.repository.WalletRecordRepository;
 import io.acrosafe.wallet.btc.util.CryptoUtils;
 import io.acrosafe.wallet.btc.util.Passphrase;
+import io.acrosafe.wallet.core.btc.BTCTransaction;
 import io.acrosafe.wallet.core.btc.BlockChainNetwork;
 import io.acrosafe.wallet.core.btc.MultisigWallet;
 import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
 import io.acrosafe.wallet.core.btc.SeedGenerator;
+import io.acrosafe.wallet.core.btc.TransactionStatus;
+import io.acrosafe.wallet.core.btc.TransactionType;
 import io.acrosafe.wallet.core.btc.util.IDGenerator;
+import io.acrosafe.wallet.core.btc.util.WalletUtils;
 
 @Service
 public class WalletService
@@ -117,7 +132,15 @@ public class WalletService
     @Autowired
     private AddressRecordRepository addressRecordRepository;
 
+    @Autowired
+    private TransactionRecordRepository transactionRecordRepository;
+
+    @Autowired
+    private TransactionOutputRecordRepository transactionOutputRecordRepository;
+
     private boolean isServiceReady;
+
+    private Map<String, BTCTransaction> pendingTransactionCache = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void initialize()
@@ -289,6 +312,27 @@ public class WalletService
     }
 
     @Transactional
+    public List<TransactionRecord> getTransactions(String walletId, int pageId, int size)
+            throws ServiceNotReadyException, WalletNotFoundException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        MultisigWallet wallet = this.blockChainNetwork.getWallet(walletId);
+        if (wallet == null)
+        {
+            throw new WalletNotFoundException("failed to find wallet. id = " + walletId);
+        }
+
+        Pageable pageable = PageRequest.of(pageId, size, Sort.by(Sort.Direction.ASC, "CreatedDate"));
+        List<TransactionRecord> records = this.transactionRecordRepository.findAllByWalletId(walletId, pageable);
+
+        return records;
+    }
+
+    @Transactional
     public WalletRecord getWallet(String walletId) throws WalletNotFoundException, ServiceNotReadyException
     {
         if (!isServiceReady)
@@ -363,6 +407,67 @@ public class WalletService
         return addressRecord;
     }
 
+    @Transactional
+    public void updateTransaction(TransactionConfidence confidence)
+    {
+        TransactionConfidence.ConfidenceType type = confidence.getConfidenceType();
+        switch (type)
+        {
+        case BUILDING:
+        {
+            if (confidence.getDepthInBlocks() >= this.applicationProperties.getDepositConfirmationNumber())
+            {
+                final String transactionId = confidence.getTransactionHash().toString();
+                TransactionRecord transactionRecord =
+                        transactionRecordRepository.findFirstByTransactionId(transactionId).orElse(null);
+
+                if (transactionRecord != null)
+                {
+                    transactionRecord.setStatus(TransactionStatus.CONFIRMED);
+                    transactionRecord.setLastModifiedDate(Instant.now());
+
+                    transactionRecordRepository.save(transactionRecord);
+
+                    // remove transaction id
+                    BTCTransaction transaction = pendingTransactionCache.get(transactionId);
+                    if (transaction != null)
+                    {
+                        pendingTransactionCache.get(transactionId).removeTransactionConfidenceListener();
+                        pendingTransactionCache.remove(transactionId);
+                    }
+                }
+            }
+            break;
+        }
+        case PENDING:
+        {
+            break;
+        }
+        case IN_CONFLICT:
+        case DEAD:
+        case UNKNOWN:
+        default:
+        {
+            final String transactionId = confidence.getTransactionHash().toString();
+            TransactionRecord transactionRecord =
+                    transactionRecordRepository.findFirstByTransactionId(transactionId).orElse(null);
+
+            if (transactionRecord != null)
+            {
+                transactionRecord.setStatus(TransactionStatus.FAILED);
+                transactionRecord.setLastModifiedDate(Instant.now());
+
+                transactionRecordRepository.save(transactionRecord);
+
+                // remove transaction id
+                pendingTransactionCache.get(transactionId).removeTransactionConfidenceListener();
+                pendingTransactionCache.remove(transactionId);
+            }
+        }
+        }
+
+    }
+
     private DownloadProgressTracker createDownloadProgressListener() throws BlockStoreException
     {
         return new DownloadProgressTracker()
@@ -387,9 +492,58 @@ public class WalletService
             {
                 logger.info("All blocks have been downloaded. BTC wallet service is available.");
                 isServiceReady = true;
-                // restorePendingTransactions();
+
+                restorePendingTransactions();
             }
         };
+    }
+
+    private void restorePendingTransactions()
+    {
+        List<TransactionRecord> transactionRecords =
+                this.transactionRecordRepository.findAllByStatus(TransactionStatus.UNCONFIRMED);
+
+        List<TransactionRecord> updatedRecords = new ArrayList<>();
+        for (TransactionRecord transactionRecord : transactionRecords)
+        {
+            MultisigWallet wallet = this.blockChainNetwork.getWallet(transactionRecord.getWalletId());
+            Transaction transaction =
+                    wallet.getTransaction(Sha256Hash.wrap(Utils.HEX.decode(transactionRecord.getTransactionId())));
+
+            if (transaction == null)
+            {
+                logger.warn("transaction {} is not in wallet cache.", transactionRecord.getTransactionId());
+            }
+            else
+            {
+                final TransactionConfidence.ConfidenceType type = transaction.getConfidence().getConfidenceType();
+                final int depth = transaction.getConfidence().getDepthInBlocks();
+
+                if (type == TransactionConfidence.ConfidenceType.PENDING || (type == TransactionConfidence.ConfidenceType.BUILDING
+                        && (depth < applicationProperties.getDepositConfirmationNumber())))
+                {
+                    BTCTransaction btcTransaction = new BTCTransaction(wallet.getWalletId(), transaction);
+                    btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
+
+                    pendingTransactionCache.put(btcTransaction.getTransactionId(), btcTransaction);
+                }
+                else
+                {
+                    transactionRecord.setStatus(
+                            WalletUtils.getBlockChainTransactionStatus(type, transaction.getConfidence().getDepthInBlocks(),
+                                    applicationProperties.getDepositConfirmationNumber()));
+                    transactionRecord.setLastModifiedDate(Instant.now());
+                    updatedRecords.add(transactionRecord);
+                }
+            }
+
+            logger.info("restore all the pending transactions. size = {}", pendingTransactionCache.size());
+
+            if (updatedRecords != null && updatedRecords.size() != 0)
+            {
+                transactionRecordRepository.saveAll(updatedRecords);
+            }
+        }
     }
 
     private void restoreWallets() throws CryptoException
@@ -464,10 +618,11 @@ public class WalletService
     }
 
     /**
-     * Implementation of coins sent event listener
+     * Implementation of coins received event listener
      */
     public class BTCWalletCoinsReceivedEventListener implements WalletCoinsReceivedEventListener
     {
+
         @Override
         public void onCoinsReceived(Wallet wallet, Transaction transaction, Coin prevBalance, Coin newBalance)
         {
@@ -479,8 +634,130 @@ public class WalletService
             {
                 logger.info("new deposite received. transactionId = {}, walletId = {}, amount = {}", transactionId, walletId,
                         diff);
+
+                TransactionRecord transactionRecord =
+                        transactionRecordRepository.findFirstByTransactionId(transactionId).orElse(null);
+
+                // If record is not saved in db
+                if (transactionRecord == null)
+                {
+                    final TransactionConfidence.ConfidenceType confidenceType = transaction.getConfidence().getConfidenceType();
+                    final int depthInBlocks = transaction.getConfidence().getDepthInBlocks();
+
+                    TransactionStatus status = WalletUtils.getBlockChainTransactionStatus(confidenceType, depthInBlocks,
+                            applicationProperties.getDepositConfirmationNumber());
+
+                    logger.info("transaction {} is not in DB. confidencyType = {}, depthInBlocks = {}", transactionId,
+                            confidenceType, depthInBlocks);
+                    TransactionRecord record = new TransactionRecord();
+                    record.setId(IDGenerator.randomUUID().toString());
+                    record.setTransactionId(transactionId);
+                    record.setLastModifiedDate(transaction.getUpdateTime().toInstant());
+                    record.setWalletId(walletId);
+                    record.setFee(BigInteger.ZERO);
+                    record.setTransactionType(TransactionType.DEPOSIT);
+                    record.setStatus(status);
+                    if (!StringUtils.isEmpty(transaction.getMemo()))
+                    {
+                        record.setMemo(transaction.getMemo());
+                    }
+
+                    List<TransactionOutput> outputs = transaction.getOutputs();
+                    if (outputs != null && outputs.size() != 0)
+                    {
+                        for (TransactionOutput output : outputs)
+                        {
+                            if (output.isMineOrWatched(wallet))
+                            {
+                                final String address = output.getScriptPubKey().getToAddress(networkParameters).toString();
+                                final int index = output.getIndex();
+                                final long amount = output.getValue().longValue();
+                                logger.info(
+                                        "transaction record doesn't exist. adding output to transaction record. address = {}, index = {}, value = {}",
+                                        address, index, amount);
+                                TransactionOutputRecord transactionOutputRecord = new TransactionOutputRecord();
+                                transactionOutputRecord.setId(IDGenerator.randomUUID().toString());
+                                transactionOutputRecord.setAmount(BigInteger.valueOf(amount));
+                                transactionOutputRecord.setCreatedDate(Instant.now());
+                                transactionOutputRecord.setOutputIndex(index);
+                                transactionOutputRecord.setTransactionId(record.getId());
+                                transactionOutputRecord.setDestination(address);
+
+                                record.addOutput(transactionOutputRecord);
+                            }
+                        }
+                    }
+
+                    transactionRecordRepository.save(record);
+
+                    if (status == TransactionStatus.UNCONFIRMED && !pendingTransactionCache.containsKey(transactionId))
+                    {
+                        BTCTransaction btcTransaction = new BTCTransaction(wallet.getDescription(), transaction);
+                        btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
+
+                        pendingTransactionCache.put(transactionId, btcTransaction);
+                    }
+                }
+                else
+                {
+                    logger.info("transaction record found in DB. transactionId = {}, walletId = {}, balance = {}", transactionId,
+                            walletId, diff);
+                    List<TransactionOutput> outputs = transaction.getOutputs();
+                    if (outputs != null && outputs.size() != 0)
+                    {
+                        final String internalTransactionId = transactionRecord.getId();
+                        for (TransactionOutput output : outputs)
+                        {
+                            if (output.isMineOrWatched(wallet))
+                            {
+                                final int index = output.getIndex();
+                                final TransactionOutputRecord existingTransactionOutputRecord = transactionOutputRecordRepository
+                                        .findFirstByTransactionIdAndOutputIndex(internalTransactionId, index).orElse(null);
+
+                                final String address = output.getScriptPubKey().getToAddress(networkParameters).toString();
+                                final long amount = output.getValue().longValue();
+                                if (existingTransactionOutputRecord == null)
+                                {
+                                    logger.info(
+                                            "transaction output doesn't exist. adding output to transaction record. address = {}, index = {}, value = {}",
+                                            address, index, amount);
+                                    TransactionOutputRecord transactionOutputRecord = new TransactionOutputRecord();
+                                    transactionOutputRecord.setId(IDGenerator.randomUUID().toString());
+                                    transactionOutputRecord.setAmount(BigInteger.valueOf(amount));
+                                    transactionOutputRecord.setCreatedDate(Instant.now());
+                                    transactionOutputRecord.setOutputIndex(index);
+                                    transactionOutputRecord.setTransactionId(internalTransactionId);
+                                    transactionOutputRecord.setDestination(address);
+
+                                    transactionOutputRecordRepository.save(transactionOutputRecord);
+                                }
+                                else
+                                {
+                                    logger.info("transaction output already existed. address = {}, index = {}, value = {}",
+                                            address, index, amount);
+                                }
+                            }
+                        }
+                    }
+
+                    if (transactionRecord.getStatus() == TransactionStatus.UNCONFIRMED)
+                    {
+                        if (!pendingTransactionCache.containsKey(transactionId))
+                        {
+                            BTCTransaction btcTransaction = new BTCTransaction(wallet.getDescription(), transaction);
+                            btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
+
+                            pendingTransactionCache.put(transactionId, btcTransaction);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                logger.debug("diff {} in transaction {} is smaller than 0.", diff, transactionId);
             }
         }
+
     }
 
     public class BTCWalletCoinsSentEventListener implements WalletCoinsSentEventListener
@@ -493,6 +770,15 @@ public class WalletService
             final String transactionId = transaction.getTxId().toString();
             logger.info("new withdrawal received. transactionId = {}, walletId = {}, balance = {}, memo = {}, fee = {}",
                     transactionId, walletId, diff, transaction.getMemo(), transaction.getFee());
+        }
+    }
+
+    public class BTCTransactionConfidenceEventListener implements TransactionConfidence.Listener
+    {
+        @Override
+        public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason)
+        {
+            updateTransaction(confidence);
         }
     }
 }

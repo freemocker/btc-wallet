@@ -25,6 +25,13 @@ package io.acrosafe.wallet.btc.web.rest;
 
 import java.util.List;
 
+import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
+import io.acrosafe.wallet.btc.domain.TransactionRecord;
+import io.acrosafe.wallet.btc.web.rest.response.GetTransactionListResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetTransactionResponse;
+import io.acrosafe.wallet.btc.web.rest.response.TransactionOutput;
+import io.acrosafe.wallet.core.btc.TransactionType;
+import io.acrosafe.wallet.core.btc.util.WalletUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -282,6 +289,73 @@ public class WalletResources
             responses.setResultCode(Result.UNKNOWN_ERROR.getCode());
             responses.setResult(Result.UNKNOWN_ERROR);
             return new ResponseEntity<>(responses, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/{walletId}/transaction/all")
+    public ResponseEntity<GetTransactionListResponse> getTransactions(@PathVariable String walletId,
+                                                                      @RequestParam(required = true, defaultValue = "0") int pageId,
+                                                                      @RequestParam(required = false, defaultValue = "100") int size)
+    {
+        GetTransactionListResponse response = new GetTransactionListResponse();
+        try
+        {
+            List<TransactionRecord> transactionRecords = this.service.getTransactions(walletId, pageId, size);
+            if (transactionRecords != null && transactionRecords.size() != 0)
+            {
+                for (TransactionRecord transactionRecord : transactionRecords)
+                {
+                    GetTransactionResponse getTransactionOutputResponse = new GetTransactionResponse();
+                    getTransactionOutputResponse.setCreatedDate(transactionRecord.getCreatedDate());
+                    getTransactionOutputResponse.setFee(transactionRecord.getFee().toString());
+                    getTransactionOutputResponse.setStatus(transactionRecord.getStatus().getStatus());
+                    getTransactionOutputResponse.setTransactionId(transactionRecord.getTransactionId());
+                    getTransactionOutputResponse.setWalletId(walletId);
+                    if (transactionRecord.getTransactionType() == TransactionType.DEPOSIT)
+                    {
+                        getTransactionOutputResponse.setType(TransactionType.DEPOSIT);
+                    }
+                    else
+                    {
+                        getTransactionOutputResponse.setType(TransactionType.WITHDRAWAL);
+                    }
+                    for (TransactionOutputRecord transactionOutputRecord : transactionRecord.getOutputs())
+                    {
+                        TransactionOutput output = new TransactionOutput();
+                        output.setIndex(transactionOutputRecord.getOutputIndex());
+                        output.setReceiveAddress(transactionOutputRecord.getDestination());
+                        output.setValue(WalletUtils.toStandardUnit(transactionOutputRecord.getAmount()).toPlainString());
+                        output.setValueInSmallestUnit(transactionOutputRecord.getAmount().toString());
+
+                        getTransactionOutputResponse.addOutput(output);
+                    }
+
+                    response.addTransaction(getTransactionOutputResponse);
+                }
+
+                response.setSize(transactionRecords.size());
+            }
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to get transaction.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

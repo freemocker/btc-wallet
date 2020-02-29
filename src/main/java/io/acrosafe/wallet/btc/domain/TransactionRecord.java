@@ -41,13 +41,12 @@ import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 
+import io.acrosafe.wallet.core.btc.TransactionStatus;
+import io.acrosafe.wallet.core.btc.TransactionType;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
-
-import io.acrosafe.wallet.btc.common.TransactionStatus;
-import io.acrosafe.wallet.btc.common.TransactionType;
 
 @Entity
 @Table(name = "transaction_record")
