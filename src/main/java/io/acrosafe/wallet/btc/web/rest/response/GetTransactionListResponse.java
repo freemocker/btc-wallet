@@ -21,24 +21,48 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.acrosafe.wallet.btc.repository;
+package io.acrosafe.wallet.btc.web.rest.response;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import io.acrosafe.wallet.core.btc.TransactionStatus;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import io.acrosafe.wallet.btc.domain.TransactionRecord;
-
-public interface TransactionRecordRepository extends JpaRepository<TransactionRecord, Long>
+public class GetTransactionListResponse extends Response
 {
-    List<TransactionRecord> findAllByStatus(TransactionStatus status);
+    @JsonProperty("size")
+    private Integer size;
 
-    List<TransactionRecord> findAllByWalletId(String walletId, Pageable pageable);
+    @JsonProperty("transactions")
+    private List<GetTransactionResponse> transactions;
 
-    List<TransactionRecord> findAllByInternalId(String internalId);
+    public List<GetTransactionResponse> getTransactions()
+    {
+        return transactions;
+    }
 
-    Optional<TransactionRecord> findFirstByTransactionId(String transactionId);
+    public void setTransactions(List<GetTransactionResponse> transactions)
+    {
+        this.transactions = transactions;
+    }
+
+    public void addTransaction(GetTransactionResponse output)
+    {
+        if (transactions == null)
+        {
+            transactions = new ArrayList<>();
+        }
+
+        transactions.add(output);
+    }
+
+    public Integer getSize()
+    {
+        return size;
+    }
+
+    public void setSize(Integer size)
+    {
+        this.size = size;
+    }
 }
