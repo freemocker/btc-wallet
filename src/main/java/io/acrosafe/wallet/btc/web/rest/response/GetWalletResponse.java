@@ -29,7 +29,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CreateWalletResponse extends Response
+public class GetWalletResponse extends Response
 {
     @JsonProperty("id")
     private String id;
@@ -37,26 +37,14 @@ public class CreateWalletResponse extends Response
     @JsonProperty("enabled")
     private Boolean enabled;
 
-    @JsonProperty("created_date")
+    @JsonProperty("createdDate")
     private Instant createdDate;
 
     @JsonProperty("label")
     private String label;
 
-    @JsonProperty("encrypted_signing_key")
-    private String encryptedSigningKey;
-
-    @JsonProperty("encrypted_backup_key")
-    private String encryptedBackupKey;
-
-    @JsonProperty("iv_spec")
-    private String spec;
-
-    @JsonProperty("salt")
-    private String salt;
-
-    @JsonProperty("seed_creation_time")
-    private Long creationTime;
+    @JsonProperty("balance")
+    private Balance balance;
 
     public String getId()
     {
@@ -66,21 +54,6 @@ public class CreateWalletResponse extends Response
     public void setId(String id)
     {
         this.id = id;
-    }
-
-    public Boolean isEnabled()
-    {
-        return enabled;
-    }
-
-    public Instant getCreatedDate()
-    {
-        return createdDate;
-    }
-
-    public void setCreatedDate(Instant createdDate)
-    {
-        this.createdDate = createdDate;
     }
 
     public Boolean getEnabled()
@@ -93,6 +66,16 @@ public class CreateWalletResponse extends Response
         this.enabled = enabled;
     }
 
+    public Instant getCreatedDate()
+    {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Instant createdDate)
+    {
+        this.createdDate = createdDate;
+    }
+
     public String getLabel()
     {
         return label;
@@ -103,54 +86,13 @@ public class CreateWalletResponse extends Response
         this.label = label;
     }
 
-    public String getEncryptedSigningKey()
+    public Balance getBalance()
     {
-        return encryptedSigningKey;
+        return balance;
     }
 
-    public void setEncryptedSigningKey(String encryptedSigningKey)
+    public void setBalance(Balance balance)
     {
-        this.encryptedSigningKey = encryptedSigningKey;
+        this.balance = balance;
     }
-
-    public String getEncryptedBackupKey()
-    {
-        return encryptedBackupKey;
-    }
-
-    public void setEncryptedBackupKey(String encryptedBackupKey)
-    {
-        this.encryptedBackupKey = encryptedBackupKey;
-    }
-
-    public String getSpec()
-    {
-        return spec;
-    }
-
-    public void setSpec(String spec)
-    {
-        this.spec = spec;
-    }
-
-    public String getSalt()
-    {
-        return salt;
-    }
-
-    public void setSalt(String salt)
-    {
-        this.salt = salt;
-    }
-
-    public Long getCreationTime()
-    {
-        return creationTime;
-    }
-
-    public void setCreationTime(Long creationTime)
-    {
-        this.creationTime = creationTime;
-    }
-
 }

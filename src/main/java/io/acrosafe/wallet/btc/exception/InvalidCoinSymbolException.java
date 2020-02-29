@@ -23,14 +23,14 @@
  */
 package io.acrosafe.wallet.btc.exception;
 
-public class InvalidSymbolException extends Exception
+public class InvalidCoinSymbolException extends Exception
 {
-    private static final long serialVersionUID = 6867113534483061629L;
+    private static final long serialVersionUID = 1656072547468154969L;
 
     /**
      * Constructs new InvalidCoinSymbolException instance.
      */
-    public InvalidSymbolException()
+    public InvalidCoinSymbolException()
     {
         super();
     }
@@ -43,7 +43,7 @@ public class InvalidSymbolException extends Exception
      * @param enableSuppression
      * @param writableStackTrace
      */
-    public InvalidSymbolException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+    public InvalidCoinSymbolException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
     {
         super(message, cause, enableSuppression, writableStackTrace);
     }
@@ -54,7 +54,7 @@ public class InvalidSymbolException extends Exception
      * @param message
      * @param cause
      */
-    public InvalidSymbolException(String message, Throwable cause)
+    public InvalidCoinSymbolException(String message, Throwable cause)
     {
         super(message, cause);
     }
@@ -64,7 +64,7 @@ public class InvalidSymbolException extends Exception
      *
      * @param message
      */
-    public InvalidSymbolException(String message)
+    public InvalidCoinSymbolException(String message)
     {
         super(message);
     }
@@ -74,7 +74,7 @@ public class InvalidSymbolException extends Exception
      *
      * @param cause
      */
-    public InvalidSymbolException(Throwable cause)
+    public InvalidCoinSymbolException(Throwable cause)
     {
         super(cause);
     }

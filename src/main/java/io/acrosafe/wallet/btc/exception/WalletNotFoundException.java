@@ -23,58 +23,58 @@
  */
 package io.acrosafe.wallet.btc.exception;
 
-public class InvalidSymbolException extends Exception
+public class WalletNotFoundException extends Exception
 {
-    private static final long serialVersionUID = 6867113534483061629L;
+    private static final long serialVersionUID = 5923190031314578114L;
 
     /**
-     * Constructs new InvalidCoinSymbolException instance.
+     * Constructs new AccountNotFoundException instance.
      */
-    public InvalidSymbolException()
+    public WalletNotFoundException()
     {
         super();
     }
 
     /**
-     * Constructs new InvalidCoinSymbolException.
+     * Constructs new AccountNotFoundException.
      *
      * @param message
      * @param cause
      * @param enableSuppression
      * @param writableStackTrace
      */
-    public InvalidSymbolException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+    public WalletNotFoundException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
     {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 
     /**
-     * Constructs new InvalidCoinSymbolException.
+     * Constructs new AccountNotFoundException.
      *
      * @param message
      * @param cause
      */
-    public InvalidSymbolException(String message, Throwable cause)
+    public WalletNotFoundException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
     /**
-     * Constructs new InvalidCoinSymbolException.
+     * Constructs new AccountNotFoundException.
      *
      * @param message
      */
-    public InvalidSymbolException(String message)
+    public WalletNotFoundException(String message)
     {
         super(message);
     }
 
     /**
-     * Constructs new InvalidCoinSymbolException.
+     * Constructs new AccountNotFoundException.
      *
      * @param cause
      */
-    public InvalidSymbolException(Throwable cause)
+    public WalletNotFoundException(Throwable cause)
     {
         super(cause);
     }
