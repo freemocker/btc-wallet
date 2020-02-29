@@ -23,9 +23,8 @@
  */
 package io.acrosafe.wallet.btc.web.rest;
 
-import io.acrosafe.wallet.btc.web.rest.response.Balance;
-import io.acrosafe.wallet.btc.web.rest.response.GetWalletResponse;
-import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +36,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import io.acrosafe.wallet.btc.domain.AddressRecord;
 import io.acrosafe.wallet.btc.domain.WalletRecord;
@@ -49,9 +49,13 @@ import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.service.WalletService;
 import io.acrosafe.wallet.btc.web.rest.request.CreateWalletRequest;
 import io.acrosafe.wallet.btc.web.rest.request.GetReceiveAddressRequest;
+import io.acrosafe.wallet.btc.web.rest.response.Balance;
 import io.acrosafe.wallet.btc.web.rest.response.CreateWalletResponse;
 import io.acrosafe.wallet.btc.web.rest.response.GetReceiveAddressResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetWalletResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetWalletsResponse;
 import io.acrosafe.wallet.btc.web.rest.response.Result;
+import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
 
 @Controller
 @RequestMapping("/api/v1/btc/wallet")
@@ -191,4 +195,94 @@ public class WalletResources
             return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @GetMapping("/{walletId}")
+    public ResponseEntity<GetWalletResponse> getWallet(@PathVariable String walletId)
+    {
+        GetWalletResponse response = new GetWalletResponse();
+        try
+        {
+            WalletRecord detail = this.service.getWallet(walletId);
+            MultisigWalletBalance multisigWalletBalance = this.service.getBalance(walletId);
+
+            Balance balance = new Balance();
+            balance.setEstimated(multisigWalletBalance.getEstimated());
+            balance.setAvailable(multisigWalletBalance.getAvailable());
+
+            response.setId(detail.getId());
+            response.setCreatedDate(detail.getCreatedDate());
+            response.setEnabled(detail.isEnabled());
+            response.setLabel(detail.getLabel());
+            response.setBalance(balance);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to get wallet.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<GetWalletsResponse> getWallets(@RequestParam(required = true, defaultValue = "0") int pageId,
+            @RequestParam(required = false, defaultValue = "100") int size)
+    {
+        GetWalletsResponse responses = new GetWalletsResponse();
+
+        try
+        {
+            List<WalletRecord> wallets = this.service.getWallets(pageId, size);
+            if (wallets != null && wallets.size() != 0)
+            {
+                for (WalletRecord wallet : wallets)
+                {
+                    final String walletId = wallet.getId();
+                    MultisigWalletBalance multisigWalletBalance = this.service.getBalance(walletId);
+
+                    Balance balance = new Balance();
+                    balance.setEstimated(multisigWalletBalance.getEstimated());
+                    balance.setAvailable(multisigWalletBalance.getAvailable());
+
+                    GetWalletResponse response = new GetWalletResponse();
+                    response.setId(walletId);
+                    response.setCreatedDate(wallet.getCreatedDate());
+                    response.setEnabled(wallet.isEnabled());
+                    response.setLabel(wallet.getLabel());
+                    responses.addWallet(response);
+                    response.setBalance(balance);
+                }
+            }
+
+            return new ResponseEntity<>(responses, HttpStatus.OK);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            responses.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            responses.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(responses, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to get all wallets.", e);
+            responses.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            responses.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(responses, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

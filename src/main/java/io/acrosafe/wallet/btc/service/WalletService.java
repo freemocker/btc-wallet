@@ -52,6 +52,10 @@ import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -282,6 +286,38 @@ public class WalletService
 
         MultisigWalletBalance balance = wallet.getWalletBalance();
         return balance;
+    }
+
+    @Transactional
+    public WalletRecord getWallet(String walletId) throws WalletNotFoundException, ServiceNotReadyException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        WalletRecord walletRecord = this.walletRecordRepository.findById(walletId).orElse(null);
+        MultisigWallet wallet = this.blockChainNetwork.getWallet(walletId);
+        if (wallet == null || walletRecord == null)
+        {
+            throw new WalletNotFoundException("wallet doesn't exist. id = " + walletId);
+        }
+
+        return walletRecord;
+    }
+
+    @Transactional
+    public List<WalletRecord> getWallets(int pageId, int size) throws ServiceNotReadyException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        Pageable pageable = PageRequest.of(pageId, size, Sort.by(Sort.Direction.DESC, "CreatedDate"));
+        Page<WalletRecord> records = this.walletRecordRepository.findAll(pageable);
+
+        return records.toList();
     }
 
     @Transactional
