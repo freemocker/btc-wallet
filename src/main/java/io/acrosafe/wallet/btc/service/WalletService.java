@@ -691,9 +691,8 @@ public class WalletService
     @Transactional
     public synchronized SignedTransaction signTransaction(String walletId, String coinSymbol, List<Recipient> recipients,
             Passphrase passphrase, Integer numberOfBlock, Boolean usingBackupSigningKey, String memo, String internalId)
-            throws ServiceNotReadyException, WalletNotFoundException, InvalidCoinSymbolException, InsufficientMoneyException,
-            FeeRecordNotFoundException, CryptoException, RequestAlreadySignedException, InvalidPassphraseException,
-            InvalidRecipientException
+            throws ServiceNotReadyException, InsufficientMoneyException, WalletNotFoundException, InvalidCoinSymbolException,
+            FeeRecordNotFoundException, CryptoException, InvalidPassphraseException, InvalidRecipientException
     {
         if (!isServiceReady)
         {
@@ -828,8 +827,7 @@ public class WalletService
         return signedTransaction;
     }
 
-    @Transactional
-    public void updateTransaction(TransactionConfidence confidence)
+    private void updateTransaction(TransactionConfidence confidence)
     {
         TransactionConfidence.ConfidenceType type = confidence.getConfidenceType();
         switch (type)

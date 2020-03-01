@@ -38,7 +38,7 @@ public class SendCoinRequest
     @JsonProperty("internal_id")
     private String internalId;
 
-    @JsonProperty("number_of_block")
+    @JsonProperty("number_block")
     private Integer numberOfBlock;
 
     @JsonProperty("symbol")
