@@ -593,7 +593,7 @@ public class WalletService
         TransactionRecord transactionRecord = new TransactionRecord();
         transactionRecord.setStatus(TransactionStatus.SIGNED);
         transactionRecord.setTransactionType(TransactionType.WITHDRAWAL);
-        transactionRecord.setFee(BigInteger.ZERO);
+        transactionRecord.setFee(BigInteger.valueOf(request.getTransaction().getFee().longValue()));
         transactionRecord.setWalletId(walletId);
         transactionRecord.setLastModifiedDate(createdDate);
         transactionRecord.setTransactionId(request.getTransaction().getTxId().toString());
@@ -780,7 +780,7 @@ public class WalletService
         TransactionRecord transactionRecord = new TransactionRecord();
         transactionRecord.setStatus(TransactionStatus.SIGNED);
         transactionRecord.setTransactionType(TransactionType.WITHDRAWAL);
-        transactionRecord.setFee(BigInteger.ZERO);
+        transactionRecord.setFee(BigInteger.valueOf(request.getTransaction().getFee().longValue()));
         transactionRecord.setWalletId(walletId);
         transactionRecord.setLastModifiedDate(createdDate);
         transactionRecord.setTransactionId(request.getTransaction().getTxId().toString());
@@ -1232,7 +1232,7 @@ public class WalletService
                 record.setTransactionId(transactionId);
                 record.setLastModifiedDate(transaction.getUpdateTime().toInstant());
                 record.setWalletId(walletId);
-                record.setFee(BigInteger.ZERO);
+                record.setFee(BigInteger.valueOf(transaction.getFee().longValue()));
                 record.setTransactionType(TransactionType.WITHDRAWAL);
                 record.setStatus(status);
                 if (!StringUtils.isEmpty(transaction.getMemo()))
