@@ -26,7 +26,6 @@ package io.acrosafe.wallet.btc.config;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import io.acrosafe.wallet.core.btc.SeedGenerator;
 import org.apache.commons.lang3.StringUtils;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.MainNetParams;
@@ -40,6 +39,7 @@ import org.springframework.core.env.Environment;
 
 import io.acrosafe.wallet.core.btc.BlockChainNetwork;
 import io.acrosafe.wallet.core.btc.Network;
+import io.acrosafe.wallet.core.btc.SeedGenerator;
 
 @Configuration
 public class BlockChainConfiguration

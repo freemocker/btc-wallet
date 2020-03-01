@@ -25,57 +25,44 @@ package io.acrosafe.wallet.btc.web.rest.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TransactionOutput
+public class SignTransactionResponse extends Response
 {
-    @JsonProperty("amount_string")
-    private String value;
+    @JsonProperty("fee_in_string")
+    private String fee;
 
-    @JsonProperty("amount_in_smallest_unit_string")
-    private String valueInSmallestUnit;
+    @JsonProperty("transaction_hex")
+    private String hex;
 
-    @JsonProperty("receive_address")
-    private String receiveAddress;
+    @JsonProperty("number_blocks")
+    private Integer numberBlocks;
 
-    @JsonProperty("index")
-    private Integer index;
-
-    public String getValue()
+    public String getFee()
     {
-        return value;
+        return fee;
     }
 
-    public void setValue(String value)
+    public void setFee(String fee)
     {
-        this.value = value;
+        this.fee = fee;
     }
 
-    public String getValueInSmallestUnit()
+    public String getHex()
     {
-        return valueInSmallestUnit;
+        return hex;
     }
 
-    public void setValueInSmallestUnit(String valueInSmallestUnit)
+    public void setHex(String hex)
     {
-        this.valueInSmallestUnit = valueInSmallestUnit;
+        this.hex = hex;
     }
 
-    public String getReceiveAddress()
+    public Integer getNumberBlocks()
     {
-        return receiveAddress;
+        return numberBlocks;
     }
 
-    public void setReceiveAddress(String receiveAddress)
+    public void setNumberBlocks(Integer numberBlocks)
     {
-        this.receiveAddress = receiveAddress;
-    }
-
-    public Integer getIndex()
-    {
-        return index;
-    }
-
-    public void setIndex(Integer index)
-    {
-        this.index = index;
+        this.numberBlocks = numberBlocks;
     }
 }

@@ -28,7 +28,7 @@ import java.util.Date;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import io.acrosafe.wallet.btc.util.Passphrase;
+import io.acrosafe.wallet.core.btc.Passphrase;
 
 @ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)
 public class ApplicationProperties

@@ -21,61 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.acrosafe.wallet.btc.web.rest.response;
+package io.acrosafe.wallet.btc.web.rest.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class TransactionOutput
+public class BroadcastRequest
 {
-    @JsonProperty("amount_string")
-    private String value;
+    @JsonProperty("transaction_hex")
+    private String transactionHex;
 
-    @JsonProperty("amount_in_smallest_unit_string")
-    private String valueInSmallestUnit;
+    @JsonProperty("transaction_memo")
+    private String transactionMemo;
 
-    @JsonProperty("receive_address")
-    private String receiveAddress;
-
-    @JsonProperty("index")
-    private Integer index;
-
-    public String getValue()
+    public String getTransactionHex()
     {
-        return value;
+        return transactionHex;
     }
 
-    public void setValue(String value)
+    public void setTransactionHex(String transactionHex)
     {
-        this.value = value;
+        this.transactionHex = transactionHex;
     }
 
-    public String getValueInSmallestUnit()
+    public String getTransactionMemo()
     {
-        return valueInSmallestUnit;
+        return transactionMemo;
     }
 
-    public void setValueInSmallestUnit(String valueInSmallestUnit)
+    public void setTransactionMemo(String transactionMemo)
     {
-        this.valueInSmallestUnit = valueInSmallestUnit;
-    }
-
-    public String getReceiveAddress()
-    {
-        return receiveAddress;
-    }
-
-    public void setReceiveAddress(String receiveAddress)
-    {
-        this.receiveAddress = receiveAddress;
-    }
-
-    public Integer getIndex()
-    {
-        return index;
-    }
-
-    public void setIndex(Integer index)
-    {
-        this.index = index;
+        this.transactionMemo = transactionMemo;
     }
 }

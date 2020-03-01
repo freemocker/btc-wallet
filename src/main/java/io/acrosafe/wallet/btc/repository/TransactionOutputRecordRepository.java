@@ -33,6 +33,7 @@ import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
 public interface TransactionOutputRecordRepository extends JpaRepository<TransactionOutputRecord, Long>
 {
     List<TransactionOutputRecord> findAllByTransactionId(String transactionId);
+
     Optional<TransactionOutputRecord> findFirstByTransactionIdAndOutputIndex(String transactionId, Integer outputIndex);
 
 }
