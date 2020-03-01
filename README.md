@@ -12,6 +12,9 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 ## REST API 
 - **List all transactions:  GET** https://hostname:9000/api/v1/btc/wallet/{walletId}/transaction/all?pageId=0&size=100
 
+  example output:
+  
+  ```json
   {
   "size": 9,
   "transactions": [
@@ -167,6 +170,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
     }
   ]
 }
+```
 
 - **Create wallet:  POST** https://hostname:9000/api/v1/btc/wallet/new
 
