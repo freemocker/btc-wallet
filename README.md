@@ -10,6 +10,164 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 6. When you see "All blocks have been downloaded. BTC wallet service is available." in your log, you system has started. It takes less than one minute if you use checkpoint. hours if not.
 
 ## REST API 
+- **List all transactions:  GET** https://hostname:9000/api/v1/btc/wallet/{walletId}/transaction/all?pageId=0&size=100
+
+  {
+  "size": 9,
+  "transactions": [
+    {
+      "transactionId": "66eb672c9abddd2fbcca761108fe3da9988102dd646b0ea0bbc92f976124ef8f",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T16:18:48.755753Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.02",
+          "amount_in_smallest_unit_string": "2000000",
+          "receive_address": "2N3aGFWk2K8PHx7KwBe53Fb8kXBgjjUc4cH",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "transactionId": "41f3cebdd096e3422f0e479a7aca6837176bfec93b148911a84f5446d3046c80",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T16:18:48.959347Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.03",
+          "amount_in_smallest_unit_string": "3000000",
+          "receive_address": "2MwyJiUC88pGKEGdPYnZZPKSZ6siKNQCXk9",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "transactionId": "8686ab6d7bfe5802af9ef54d37b197dcb7a18b55a14085d289b1d70afea29d8c",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T16:18:49.221988Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.01",
+          "amount_in_smallest_unit_string": "1000000",
+          "receive_address": "2N3aGFWk2K8PHx7KwBe53Fb8kXBgjjUc4cH",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "transactionId": "aedebdd07916012120ca4d5f4f8b448411da6484ddf01ad37d9fda328b4ec70f",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T16:43:52.606155Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.01",
+          "amount_in_smallest_unit_string": "1000000",
+          "receive_address": "2NFwcGYHAfuPTKZW462Pjczzfo2nhHhzSaV",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "transactionId": "7968f703e45b459af64d0807dac07a579907fc65c4bb2fa427aa4280cf402f8e",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T22:45:04.139316Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "WITHDRAWAL",
+      "outputs": [
+        {
+          "amount_string": "0.02772574",
+          "amount_in_smallest_unit_string": "2772574",
+          "receive_address": "2NALc952qE1chChudpyLKsmykqB9LzKX4JL",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "transactionId": "757cdefc74239937498378fdd306531f0806542205b687281b5f9ff75fe0b096",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-02-29T22:47:38.383282Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "WITHDRAWAL",
+      "outputs": [
+        {
+          "amount_string": "0.01772574",
+          "amount_in_smallest_unit_string": "1772574",
+          "receive_address": "2NFvJTVC1gTczFsH5WmfH88THhjDKD1r9VX",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "transactionId": "d20dd0e773d951541514ca1ce7b67a7230a541e44d6f801cff2ca4e3e3917eed",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-03-01T04:28:25.926420Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.01",
+          "amount_in_smallest_unit_string": "1000000",
+          "receive_address": "2N1zgxErHM9WEUYuRTFXvJ8dxMGWPvuKutg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "transactionId": "10b7d80ff3a7bad2a5cbde71124d2ee8669c83337ce7c3b516a5a99e1f3c39eb",
+      "status": "confirmed",
+      "fee_string": "0",
+      "created_date": "2020-03-01T04:28:25.946408Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "DEPOSIT",
+      "outputs": [
+        {
+          "amount_string": "0.1",
+          "amount_in_smallest_unit_string": "10000000",
+          "receive_address": "2N1zgxErHM9WEUYuRTFXvJ8dxMGWPvuKutg",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "transactionId": "ae9aa64c88a93a87eb676e84c41f4aa0af377a3c656cf40f19adaa175d9521eb",
+      "status": "unconfirmed",
+      "fee_string": "0",
+      "created_date": "2020-03-01T13:31:46.508370Z",
+      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
+      "transaction_type": "WITHDRAWAL",
+      "outputs": [
+        {
+          "amount_string": "0.01198111",
+          "amount_in_smallest_unit_string": "1198111",
+          "receive_address": "tb1qcfxn0t3htlufzq6xe5cgcl3g2r2590vpp64had",
+          "index": 1
+        },
+        {
+          "amount_string": "0.01188111",
+          "amount_in_smallest_unit_string": "1188111",
+          "receive_address": "2MzwkogEL5bQ2bGqfEtXtmQjB6PW6T79fhw",
+          "index": 2
+        }
+      ]
+    }
+  ]
+}
+
 - **Create wallet:  POST** https://hostname:9000/api/v1/btc/wallet/new
 
     wallet-per-user is supported. You can create one or multiple wallets for one user. Based on our performance test, each microservice should be able to support 200 wallet.
