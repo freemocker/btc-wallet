@@ -539,12 +539,6 @@ public class WalletResources
             response.setResult(Result.INVALID_CRYPTO_OPERATION);
             return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
         }
-        catch (RequestAlreadySignedException e)
-        {
-            response.setResultCode(Result.TRANSACTION_SIGNING_FAILED.getCode());
-            response.setResult(Result.TRANSACTION_SIGNING_FAILED);
-            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
-        }
         catch (Throwable e)
         {
             logger.error("failed to send coin.", e);
