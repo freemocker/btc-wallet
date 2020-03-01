@@ -51,54 +51,6 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
       ]
     },
     {
-      "transactionId": "8686ab6d7bfe5802af9ef54d37b197dcb7a18b55a14085d289b1d70afea29d8c",
-      "status": "confirmed",
-      "fee_string": "0",
-      "created_date": "2020-02-29T16:18:49.221988Z",
-      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
-      "transaction_type": "DEPOSIT",
-      "outputs": [
-        {
-          "amount_string": "0.01",
-          "amount_in_smallest_unit_string": "1000000",
-          "receive_address": "2N3aGFWk2K8PHx7KwBe53Fb8kXBgjjUc4cH",
-          "index": 1
-        }
-      ]
-    },
-    {
-      "transactionId": "aedebdd07916012120ca4d5f4f8b448411da6484ddf01ad37d9fda328b4ec70f",
-      "status": "confirmed",
-      "fee_string": "0",
-      "created_date": "2020-02-29T16:43:52.606155Z",
-      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
-      "transaction_type": "DEPOSIT",
-      "outputs": [
-        {
-          "amount_string": "0.01",
-          "amount_in_smallest_unit_string": "1000000",
-          "receive_address": "2NFwcGYHAfuPTKZW462Pjczzfo2nhHhzSaV",
-          "index": 1
-        }
-      ]
-    },
-    {
-      "transactionId": "7968f703e45b459af64d0807dac07a579907fc65c4bb2fa427aa4280cf402f8e",
-      "status": "confirmed",
-      "fee_string": "0",
-      "created_date": "2020-02-29T22:45:04.139316Z",
-      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
-      "transaction_type": "WITHDRAWAL",
-      "outputs": [
-        {
-          "amount_string": "0.02772574",
-          "amount_in_smallest_unit_string": "2772574",
-          "receive_address": "2NALc952qE1chChudpyLKsmykqB9LzKX4JL",
-          "index": 0
-        }
-      ]
-    },
-    {
       "transactionId": "757cdefc74239937498378fdd306531f0806542205b687281b5f9ff75fe0b096",
       "status": "confirmed",
       "fee_string": "0",
@@ -111,38 +63,6 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
           "amount_in_smallest_unit_string": "1772574",
           "receive_address": "2NFvJTVC1gTczFsH5WmfH88THhjDKD1r9VX",
           "index": 0
-        }
-      ]
-    },
-    {
-      "transactionId": "d20dd0e773d951541514ca1ce7b67a7230a541e44d6f801cff2ca4e3e3917eed",
-      "status": "confirmed",
-      "fee_string": "0",
-      "created_date": "2020-03-01T04:28:25.926420Z",
-      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
-      "transaction_type": "DEPOSIT",
-      "outputs": [
-        {
-          "amount_string": "0.01",
-          "amount_in_smallest_unit_string": "1000000",
-          "receive_address": "2N1zgxErHM9WEUYuRTFXvJ8dxMGWPvuKutg",
-          "index": 0
-        }
-      ]
-    },
-    {
-      "transactionId": "10b7d80ff3a7bad2a5cbde71124d2ee8669c83337ce7c3b516a5a99e1f3c39eb",
-      "status": "confirmed",
-      "fee_string": "0",
-      "created_date": "2020-03-01T04:28:25.946408Z",
-      "wallet_id": "36c156efe2774effb9dfaf9dc966d89e",
-      "transaction_type": "DEPOSIT",
-      "outputs": [
-        {
-          "amount_string": "0.1",
-          "amount_in_smallest_unit_string": "10000000",
-          "receive_address": "2N1zgxErHM9WEUYuRTFXvJ8dxMGWPvuKutg",
-          "index": 1
         }
       ]
     },
@@ -169,7 +89,6 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
       ]
     }
   ]
-}
 ```
 
 - **Create wallet:  POST** https://hostname:9000/api/v1/btc/wallet/new
