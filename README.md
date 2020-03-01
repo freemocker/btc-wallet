@@ -89,8 +89,8 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
       ]
     }
   ]
+}
 ```
-
 - **Create wallet:  POST** https://hostname:9000/api/v1/btc/wallet/new
 
     wallet-per-user is supported. You can create one or multiple wallets for one user. Based on our performance test, each microservice should be able to support 200 wallet.
