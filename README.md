@@ -14,7 +14,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 
   example output:
   
-  ```json
+  ```javascript
   {
   "size": 9,
   "transactions": [
@@ -91,12 +91,14 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
   ]
 }
 ```
+
+
 - **Create wallet:  POST** https://hostname:9000/api/v1/btc/wallet/new
 
     wallet-per-user is supported. You can create one or multiple wallets for one user. Based on our performance test, each microservice should be able to support 200 wallet.
   
   example input:
-  ```json
+  ```javascript
   {
   	"symbol": "BTC",
   	"label":"test wallet 001",
@@ -107,7 +109,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
   ```
   
   example output:
-  ```json
+  ```javascript
   {
     "id": "36c156efe2774effb9dfaf9dc966d89e",
     "enabled": true,
@@ -129,7 +131,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 - **Generate receiving address:  POST**   https://hostname:9000/api/v1/btc/wallet/{walletId}/address/new
 
     example input:
-    ```json
+    ```javascript
   {
   	"symbol":"BTC",
     "label": "testing"
@@ -137,7 +139,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
   ```
   
   example output:
-  ```json
+  ```javascript
   {
     "address": "2N1zgxErHM9WEUYuRTFXvJ8dxMGWPvuKutg",
     "label": "user1asdfasdfasf"
@@ -149,7 +151,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 - **Send coin directly:   POST**   https://hostname:9000/api/v1/btc/wallet/{walletId}/send
 
      example input:
-     ```json
+     ```javascript
       {
        "symbol":"BTC",
        "internal_id": "alskjdflaksdlfk",
@@ -172,7 +174,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
      
      
       example output:
-      ```json
+      ```javascript
       {
         {
           "transaction_id": "ae9aa64c88a93a87eb676e84c41f4aa0af377a3c656cf40f19adaa175d9521eb"
@@ -182,7 +184,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 - **Sign Transaction:   POST**   https://hostname:9000/api/v1/btc/wallet/{walletId}/sign
 
     example input:
-    ```json
+    ```javascript
           {
            "symbol":"BTC",
            "internal_id": "alskjdflaksdlfk",
@@ -204,7 +206,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
            ```
           
           example output:
-          ```json
+          ```javascript
           {
             "fee_in_string": "0.00001804",
             "transaction_hex": "0100000001eb393c1f9ea9a516b5c3e77c33839c66e82e4d1271decba5d2baa7f30fd8b71001000000fc0047304402205548ddd4b60b4a5bcd8dc0f55c80fc51ed15e301fe40219acddf01e141c9b3fb022072383faf7395a9fde8514f8b0809a78369ac98724b5d4d59ab8adc727d7fb63701473044022078e3ca7a204e513b78b3041fa143cf313d490fa4f5dc3b5384242e8046f707b6022067cafc27b082bf7e5133d2a1134b45809717a287889c895f2db871862e89770f014c69522102198b151d36179bd87a740e198b0122d10088f497a0ffec418154510ed880c0e2210262491149733e1950da219c64ad1a67044ce418f209d90cdefd48cb10af0b0a752103e2490c98cdcf29c5967d177f50261f86d6c128118b7ce3b09e49dac8f53e730353aeffffffff03462674000000000017a9146e00f3c8bc3ef01618988ffb047621db2b43f028871f48120000000000160014c24d37ae375ff8910346cd308c7e2850d542bd810f2112000000000017a91454733e69914609b27e84af7e8ffe6aff46106ab78700000000",
@@ -215,7 +217,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
 - **Broadcast Transaction:  POST**   https://hostname:9000/api/v1/btc/wallet/{walletId}/broadcast
 
     example input:
-    ```json
+    ```javascript
            {
             "transaction_hex":"0100000001eb393c1f9ea9a516b5c3e77c33839c66e82e4d1271decba5d2baa7f30fd8b71001000000fc0047304402205548ddd4b60b4a5bcd8dc0f55c80fc51ed15e301fe40219acddf01e141c9b3fb022072383faf7395a9fde8514f8b0809a78369ac98724b5d4d59ab8adc727d7fb63701473044022078e3ca7a204e513b78b3041fa143cf313d490fa4f5dc3b5384242e8046f707b6022067cafc27b082bf7e5133d2a1134b45809717a287889c895f2db871862e89770f014c69522102198b151d36179bd87a740e198b0122d10088f497a0ffec418154510ed880c0e2210262491149733e1950da219c64ad1a67044ce418f209d90cdefd48cb10af0b0a752103e2490c98cdcf29c5967d177f50261f86d6c128118b7ce3b09e49dac8f53e730353aeffffffff03462674000000000017a9146e00f3c8bc3ef01618988ffb047621db2b43f028871f48120000000000160014c24d37ae375ff8910346cd308c7e2850d542bd810f2112000000000017a91454733e69914609b27e84af7e8ffe6aff46106ab78700000000",
             "transaction_memo": "1234567890"
@@ -225,7 +227,7 @@ Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any
           
           
           example output:
-          ```json
+          ```javascript
           {
             "transaction_id": "ae9aa64c88a93a87eb676e84c41f4aa0af377a3c656cf40f19adaa175d9521eb"
           }
