@@ -26,11 +26,11 @@ package io.acrosafe.wallet.btc.repository;
 import java.util.List;
 import java.util.Optional;
 
-import io.acrosafe.wallet.core.btc.TransactionStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import io.acrosafe.wallet.btc.domain.TransactionRecord;
+import io.acrosafe.wallet.core.btc.TransactionStatus;
 
 public interface TransactionRecordRepository extends JpaRepository<TransactionRecord, Long>
 {

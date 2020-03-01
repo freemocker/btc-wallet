@@ -60,6 +60,7 @@ import org.bitcoinj.wallet.MarriedKeyChain;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsSentEventListener;
+import org.bouncycastle.util.encoders.Hex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,28 +91,29 @@ import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
 import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
 import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
+import io.acrosafe.wallet.btc.exception.TransactionAlreadyBroadcastedException;
 import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.repository.AddressRecordRepository;
 import io.acrosafe.wallet.btc.repository.FeeConfigRecordRepository;
 import io.acrosafe.wallet.btc.repository.TransactionOutputRecordRepository;
 import io.acrosafe.wallet.btc.repository.TransactionRecordRepository;
 import io.acrosafe.wallet.btc.repository.WalletRecordRepository;
-import io.acrosafe.wallet.btc.util.CryptoUtils;
-import io.acrosafe.wallet.btc.util.Passphrase;
 import io.acrosafe.wallet.btc.web.rest.request.Recipient;
 import io.acrosafe.wallet.core.btc.BTCTransaction;
 import io.acrosafe.wallet.core.btc.BlockChainNetwork;
+import io.acrosafe.wallet.core.btc.CryptoUtils;
+import io.acrosafe.wallet.core.btc.IDGenerator;
 import io.acrosafe.wallet.core.btc.MultisigSendRequest;
 import io.acrosafe.wallet.core.btc.MultisigTransactionSigner;
 import io.acrosafe.wallet.core.btc.MultisigWallet;
 import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
+import io.acrosafe.wallet.core.btc.Passphrase;
 import io.acrosafe.wallet.core.btc.SeedGenerator;
 import io.acrosafe.wallet.core.btc.SignedTransaction;
 import io.acrosafe.wallet.core.btc.TransactionStatus;
 import io.acrosafe.wallet.core.btc.TransactionType;
+import io.acrosafe.wallet.core.btc.WalletUtils;
 import io.acrosafe.wallet.core.btc.exception.RequestAlreadySignedException;
-import io.acrosafe.wallet.core.btc.util.IDGenerator;
-import io.acrosafe.wallet.core.btc.util.WalletUtils;
 
 @Service
 public class WalletService
@@ -175,6 +177,76 @@ public class WalletService
         catch (Throwable t)
         {
             logger.error("failed to start BTC wallet service.", t);
+        }
+    }
+
+    @Transactional
+    public synchronized String broadcastTransaction(String walletId, String signedTransactionHex, String memo)
+            throws BroadcastFailedException, TransactionAlreadyBroadcastedException
+    {
+        Transaction transaction = new Transaction(networkParameters, Hex.decode(signedTransactionHex));
+
+        TransactionRecord record =
+                this.transactionRecordRepository.findFirstByTransactionId(transaction.getTxId().toString()).orElse(null);
+
+        if (record != null && record.getStatus() != TransactionStatus.SIGNED)
+        {
+            throw new TransactionAlreadyBroadcastedException("transaction has been broadcasted already.");
+        }
+
+        try
+        {
+            ListenableFuture<Transaction> future = this.blockChainNetwork.broadcastTransaction(transaction);
+            final Transaction result = future.get();
+
+            if (result == null)
+            {
+                record.setStatus(TransactionStatus.FAILED);
+                transactionRecordRepository.save(record);
+                throw new BroadcastFailedException("broadcasting failed. result is null.");
+            }
+            Futures.addCallback(future, new FutureCallback<Transaction>()
+            {
+                @Override
+                public void onSuccess(Transaction transaction)
+                {
+                    if (record != null)
+                    {
+                        record.setStatus(TransactionStatus.UNCONFIRMED);
+                        transactionRecordRepository.save(record);
+
+                        final String transactionId = transaction.getTxId().toString();
+                        if (!pendingTransactionCache.containsKey(transactionId))
+                        {
+                            BTCTransaction btcTransaction = new BTCTransaction(walletId, transaction);
+                            btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
+
+                            pendingTransactionCache.put(transactionId, btcTransaction);
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable throwable)
+                {
+                    if (record != null)
+                    {
+                        record.setStatus(TransactionStatus.FAILED);
+                        transactionRecordRepository.save(record);
+                    }
+                }
+            }, MoreExecutors.directExecutor());
+
+            return result.getTxId().toString();
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            if (record != null)
+            {
+                record.setStatus(TransactionStatus.UNCONFIRMED);
+                transactionRecordRepository.save(record);
+            }
+            throw new BroadcastFailedException("broadcast failed.", e);
         }
     }
 
@@ -614,6 +686,146 @@ public class WalletService
             }
             throw new BroadcastFailedException("broadcast failed.", e);
         }
+    }
+
+    @Transactional
+    public synchronized SignedTransaction signTransaction(String walletId, String coinSymbol, List<Recipient> recipients,
+            Passphrase passphrase, Integer numberOfBlock, Boolean usingBackupSigningKey, String memo, String internalId)
+            throws ServiceNotReadyException, WalletNotFoundException, InvalidCoinSymbolException, InsufficientMoneyException,
+            FeeRecordNotFoundException, CryptoException, RequestAlreadySignedException, InvalidPassphraseException,
+            InvalidRecipientException
+    {
+        if (!isServiceReady)
+        {
+            throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
+        }
+
+        MultisigWallet wallet = this.blockChainNetwork.getWallet(walletId);
+        if (wallet == null)
+        {
+            throw new WalletNotFoundException("failed to find wallet in cache. id = " + walletId);
+        }
+
+        WalletRecord record = this.walletRecordRepository.findById(walletId).orElse(null);
+        if (record == null)
+        {
+            throw new WalletNotFoundException("failed to find wallet record in db. id = " + walletId);
+        }
+
+        if (StringUtils.isEmpty(coinSymbol) || !coinSymbol.equalsIgnoreCase(COIN_SYMBOL))
+        {
+            throw new InvalidCoinSymbolException("coin symbol is not valid.");
+        }
+
+        if ((passphrase == null || StringUtils.isEmpty(passphrase.getStringValue())))
+        {
+            throw new InvalidPassphraseException("signing key or backup signing key is missing in request.");
+        }
+
+        if (recipients == null || recipients.size() == 0)
+        {
+            throw new InvalidRecipientException("receipients cannot be null or empty.");
+        }
+
+        if (numberOfBlock == null || numberOfBlock <= 0)
+        {
+            numberOfBlock = DEFAULT_NUMBER_OF_BLOCK;
+        }
+
+        final FeeConfigRecord feeRecord = this.feeConfigRecordRepository.findById(numberOfBlock).orElse(null);
+        if (feeRecord == null)
+        {
+            throw new FeeRecordNotFoundException(
+                    "failed to find the fee record based on given number of block. numberOfBlock = " + numberOfBlock);
+        }
+
+        // Generates change address and save it to DB.
+        Address changeAddress = wallet.freshReceiveAddress();
+        AddressRecord changeAddressRecord = this.addressRecordRepository.findById(changeAddress.toString()).orElse(null);
+        while (changeAddressRecord != null)
+        {
+            changeAddress = wallet.freshReceiveAddress();
+            changeAddressRecord = this.addressRecordRepository.findById(changeAddress.toString()).orElse(null);
+        }
+        wallet.addWatchedAddress(changeAddress);
+
+        AddressRecord addressRecord = new AddressRecord();
+        addressRecord.setCreatedDate(Instant.now());
+        addressRecord.setWalletId(walletId);
+        addressRecord.setChangeAddress(true);
+        addressRecord.setReceiveAddress(changeAddress.toString());
+
+        this.addressRecordRepository.save(addressRecord);
+
+        Transaction transaction = new Transaction(networkParameters);
+        for (Recipient recipient : recipients)
+        {
+            final Address address = Address.fromString(networkParameters, recipient.getAddress());
+            transaction.addOutput(Coin.valueOf(Long.parseLong(recipient.getAmount())), ScriptBuilder.createOutputScript(address));
+        }
+
+        MultisigSendRequest request = MultisigSendRequest.forTx(transaction);
+        request.setFeePerKb(Coin.valueOf(feeRecord.getFeePerKb().longValue()));
+        request.setChangeAddress(changeAddress);
+
+        TransactionSigner signers = this.restoreTransactionSigner(record, passphrase, usingBackupSigningKey);
+        final String signedTransactionHex = wallet.buildAndSignTransaction(request, signers);
+
+        SignedTransaction signedTransaction = new SignedTransaction();
+        signedTransaction.setFee(request.getTransaction().getFee().toPlainString());
+        signedTransaction.setHex(signedTransactionHex);
+        signedTransaction.setNumberBlock(numberOfBlock);
+
+        final String id = IDGenerator.randomUUID().toString();
+        final Instant createdDate = Instant.now();
+        TransactionRecord transactionRecord = new TransactionRecord();
+        transactionRecord.setStatus(TransactionStatus.SIGNED);
+        transactionRecord.setTransactionType(TransactionType.WITHDRAWAL);
+        transactionRecord.setFee(BigInteger.ZERO);
+        transactionRecord.setWalletId(walletId);
+        transactionRecord.setLastModifiedDate(createdDate);
+        transactionRecord.setTransactionId(request.getTransaction().getTxId().toString());
+        transactionRecord.setCreatedDate(createdDate);
+        transactionRecord.setId(id);
+
+        if (!StringUtils.isEmpty(memo))
+        {
+            transactionRecord.setMemo(memo);
+        }
+
+        if (!StringUtils.isEmpty(internalId))
+        {
+            transactionRecord.setInternalId(internalId);
+        }
+
+        List<TransactionOutput> outputs = transaction.getOutputs();
+        if (outputs != null && outputs.size() != 0)
+        {
+            for (TransactionOutput output : outputs)
+            {
+                if (!output.isMineOrWatched(wallet))
+                {
+                    final String address = output.getScriptPubKey().getToAddress(networkParameters).toString();
+                    final int index = output.getIndex();
+                    final long amount = output.getValue().longValue();
+                    logger.info("signing transaction, adding output to transaction record. address = {}, index = {}, value = {}",
+                            address, index, amount);
+                    TransactionOutputRecord transactionOutputRecord = new TransactionOutputRecord();
+                    transactionOutputRecord.setId(IDGenerator.randomUUID().toString());
+                    transactionOutputRecord.setAmount(BigInteger.valueOf(amount));
+                    transactionOutputRecord.setCreatedDate(Instant.now());
+                    transactionOutputRecord.setOutputIndex(index);
+                    transactionOutputRecord.setTransactionId(id);
+                    transactionOutputRecord.setDestination(address);
+
+                    transactionRecord.addOutput(transactionOutputRecord);
+                }
+            }
+        }
+
+        transactionRecordRepository.save(transactionRecord);
+
+        return signedTransaction;
     }
 
     @Transactional

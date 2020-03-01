@@ -25,19 +25,6 @@ package io.acrosafe.wallet.btc.web.rest;
 
 import java.util.List;
 
-import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
-import io.acrosafe.wallet.btc.domain.TransactionRecord;
-import io.acrosafe.wallet.btc.exception.FeeRecordNotFoundException;
-import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
-import io.acrosafe.wallet.btc.util.Passphrase;
-import io.acrosafe.wallet.btc.web.rest.request.SendCoinRequest;
-import io.acrosafe.wallet.btc.web.rest.response.GetTransactionListResponse;
-import io.acrosafe.wallet.btc.web.rest.response.GetTransactionResponse;
-import io.acrosafe.wallet.btc.web.rest.response.SendCoinResponse;
-import io.acrosafe.wallet.btc.web.rest.response.TransactionOutput;
-import io.acrosafe.wallet.core.btc.TransactionType;
-import io.acrosafe.wallet.core.btc.exception.RequestAlreadySignedException;
-import io.acrosafe.wallet.core.btc.util.WalletUtils;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,23 +40,41 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import io.acrosafe.wallet.btc.domain.AddressRecord;
+import io.acrosafe.wallet.btc.domain.TransactionOutputRecord;
+import io.acrosafe.wallet.btc.domain.TransactionRecord;
 import io.acrosafe.wallet.btc.domain.WalletRecord;
+import io.acrosafe.wallet.btc.exception.BroadcastFailedException;
 import io.acrosafe.wallet.btc.exception.CryptoException;
+import io.acrosafe.wallet.btc.exception.FeeRecordNotFoundException;
 import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
 import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
+import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
 import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
+import io.acrosafe.wallet.btc.exception.TransactionAlreadyBroadcastedException;
 import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
 import io.acrosafe.wallet.btc.service.WalletService;
+import io.acrosafe.wallet.btc.web.rest.request.BroadcastRequest;
 import io.acrosafe.wallet.btc.web.rest.request.CreateWalletRequest;
 import io.acrosafe.wallet.btc.web.rest.request.GetReceiveAddressRequest;
+import io.acrosafe.wallet.btc.web.rest.request.SendCoinRequest;
 import io.acrosafe.wallet.btc.web.rest.response.Balance;
 import io.acrosafe.wallet.btc.web.rest.response.CreateWalletResponse;
 import io.acrosafe.wallet.btc.web.rest.response.GetReceiveAddressResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetTransactionListResponse;
+import io.acrosafe.wallet.btc.web.rest.response.GetTransactionResponse;
 import io.acrosafe.wallet.btc.web.rest.response.GetWalletResponse;
 import io.acrosafe.wallet.btc.web.rest.response.GetWalletsResponse;
 import io.acrosafe.wallet.btc.web.rest.response.Result;
+import io.acrosafe.wallet.btc.web.rest.response.SendCoinResponse;
+import io.acrosafe.wallet.btc.web.rest.response.SignTransactionResponse;
+import io.acrosafe.wallet.btc.web.rest.response.TransactionOutput;
 import io.acrosafe.wallet.core.btc.MultisigWalletBalance;
+import io.acrosafe.wallet.core.btc.Passphrase;
+import io.acrosafe.wallet.core.btc.SignedTransaction;
+import io.acrosafe.wallet.core.btc.TransactionType;
+import io.acrosafe.wallet.core.btc.WalletUtils;
+import io.acrosafe.wallet.core.btc.exception.RequestAlreadySignedException;
 
 @Controller
 @RequestMapping("/api/v1/btc/wallet")
@@ -301,8 +306,8 @@ public class WalletResources
 
     @GetMapping("/{walletId}/transaction/all")
     public ResponseEntity<GetTransactionListResponse> getTransactions(@PathVariable String walletId,
-                                                                      @RequestParam(required = true, defaultValue = "0") int pageId,
-                                                                      @RequestParam(required = false, defaultValue = "100") int size)
+            @RequestParam(required = true, defaultValue = "0") int pageId,
+            @RequestParam(required = false, defaultValue = "100") int size)
     {
         GetTransactionListResponse response = new GetTransactionListResponse();
         try
@@ -379,6 +384,116 @@ public class WalletResources
                     request.getNumberOfBlock(), request.getUsingBackupSigner(), request.getMemo(), request.getInternalId());
 
             response.setTransactionId(id);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (ServiceNotReadyException e)
+        {
+            response.setResultCode(Result.SERVICE_NOT_READY.getCode());
+            response.setResult(Result.SERVICE_NOT_READY);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (WalletNotFoundException e)
+        {
+            response.setResultCode(Result.WALLET_NOT_FOUND.getCode());
+            response.setResult(Result.WALLET_NOT_FOUND);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InvalidCoinSymbolException e)
+        {
+            response.setResultCode(Result.INVALID_COIN_SYMBOL.getCode());
+            response.setResult(Result.INVALID_COIN_SYMBOL);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InvalidRecipientException e)
+        {
+            response.setResultCode(Result.INVALID_RECIPIENT.getCode());
+            response.setResult(Result.INVALID_RECIPIENT);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (InsufficientMoneyException e)
+        {
+            response.setResultCode(Result.INSUFFICIENT_BALANCE.getCode());
+            response.setResult(Result.INSUFFICIENT_BALANCE);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (FeeRecordNotFoundException e)
+        {
+            response.setResultCode(Result.INVALID_FEE_INFORMATION.getCode());
+            response.setResult(Result.INVALID_FEE_INFORMATION);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (CryptoException e)
+        {
+            response.setResultCode(Result.INVALID_CRYPTO_OPERATION.getCode());
+            response.setResult(Result.INVALID_CRYPTO_OPERATION);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (RequestAlreadySignedException e)
+        {
+            response.setResultCode(Result.TRANSACTION_SIGNING_FAILED.getCode());
+            response.setResult(Result.TRANSACTION_SIGNING_FAILED);
+            return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to send coin.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{walletId}/broadcast")
+    public ResponseEntity<SendCoinResponse> broadcast(@PathVariable String walletId, @RequestBody BroadcastRequest request)
+    {
+        SendCoinResponse response = new SendCoinResponse();
+        try
+        {
+            final String transactionId =
+                    this.service.broadcastTransaction(walletId, request.getTransactionHex(), request.getTransactionMemo());
+
+            response.setTransactionId(transactionId);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+        catch (TransactionAlreadyBroadcastedException e)
+        {
+            response.setResultCode(Result.TRANSACTION_ALREADY_BROADCASTED.getCode());
+            response.setResult(Result.TRANSACTION_ALREADY_BROADCASTED);
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+        catch (BroadcastFailedException e)
+        {
+            response.setResultCode(Result.BROADCAST_FAILED.getCode());
+            response.setResult(Result.BROADCAST_FAILED);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        catch (Throwable e)
+        {
+            logger.error("failed to send coin.", e);
+            response.setResultCode(Result.UNKNOWN_ERROR.getCode());
+            response.setResult(Result.UNKNOWN_ERROR);
+            return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("/{walletId}/sign")
+    public ResponseEntity<SignTransactionResponse> signTransaction(@PathVariable String walletId,
+            @RequestBody SendCoinRequest request)
+    {
+        SignTransactionResponse response = new SignTransactionResponse();
+
+        try
+        {
+            Passphrase passphrase =
+                    request.getUsingBackupSigner() ? request.getBackupSigningKeyPassphrase() : request.getSigningKeyPassphrase();
+            SignedTransaction signedTransaction = service.signTransaction(walletId, request.getSymbol(), request.getRecipients(),
+                    passphrase, request.getNumberOfBlock(), request.getUsingBackupSigner(), request.getMemo(),
+                    request.getInternalId());
+
+            response.setFee(signedTransaction.getFee());
+            response.setHex(signedTransaction.getHex());
+            response.setNumberBlocks(signedTransaction.getNumberBlock());
 
             return new ResponseEntity<>(response, HttpStatus.OK);
         }

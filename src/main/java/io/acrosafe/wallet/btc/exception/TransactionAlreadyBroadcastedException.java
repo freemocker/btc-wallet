@@ -23,55 +23,58 @@
  */
 package io.acrosafe.wallet.btc.exception;
 
-public class FeeRecordNotFoundException extends Exception
+public class TransactionAlreadyBroadcastedException extends Exception
 {
-    private static final long serialVersionUID = -1252444294101895291L;
 
-    public FeeRecordNotFoundException()
+    /**
+     * Constructs new TransactionAlreadyBroadcastedException instance.
+     */
+    public TransactionAlreadyBroadcastedException()
     {
         super();
     }
 
     /**
-     * Constructs new FeeRecordNotFoundException.
+     * Constructs new TransactionAlreadyBroadcastedException.
      *
      * @param message
      * @param cause
      * @param enableSuppression
      * @param writableStackTrace
      */
-    public FeeRecordNotFoundException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+    public TransactionAlreadyBroadcastedException(String message, Throwable cause, boolean enableSuppression,
+            boolean writableStackTrace)
     {
         super(message, cause, enableSuppression, writableStackTrace);
     }
 
     /**
-     * Constructs new FeeRecordNotFoundException.
+     * Constructs new TransactionAlreadyBroadcastedException.
      *
      * @param message
      * @param cause
      */
-    public FeeRecordNotFoundException(String message, Throwable cause)
+    public TransactionAlreadyBroadcastedException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
     /**
-     * Constructs new FeeRecordNotFoundException.
+     * Constructs new TransactionAlreadyBroadcastedException.
      *
      * @param message
      */
-    public FeeRecordNotFoundException(String message)
+    public TransactionAlreadyBroadcastedException(String message)
     {
         super(message);
     }
 
     /**
-     * Constructs new FeeRecordNotFoundException.
+     * Constructs new TransactionAlreadyBroadcastedException.
      *
      * @param cause
      */
-    public FeeRecordNotFoundException(Throwable cause)
+    public TransactionAlreadyBroadcastedException(Throwable cause)
     {
         super(cause);
     }

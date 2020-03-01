@@ -25,7 +25,8 @@ package io.acrosafe.wallet.btc.web.rest.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.acrosafe.wallet.btc.util.Passphrase;
+
+import io.acrosafe.wallet.core.btc.Passphrase;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class CreateWalletRequest
