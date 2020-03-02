@@ -1,6 +1,6 @@
 logging:
   level:
-    ROOT: INFO
+    ROOT: ERROR
     io.acrosafe.wallet.btc: DEBUG
 
 spring:
