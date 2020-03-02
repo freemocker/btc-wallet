@@ -35,9 +35,12 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.PostConstruct;
 
+import io.acrosafe.wallet.core.btc.exception.InvalidTransactionException;
+import io.acrosafe.wallet.core.btc.exception.SigningTransactionFailedException;
 import org.apache.commons.lang3.StringUtils;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Context;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
@@ -196,6 +199,7 @@ public class WalletService
 
         try
         {
+            Context.propagate(this.blockChainNetwork.getContext());
             ListenableFuture<Transaction> future = this.blockChainNetwork.broadcastTransaction(transaction);
             final Transaction result = future.get();
 
@@ -279,6 +283,8 @@ public class WalletService
         {
             enabled = true;
         }
+
+        Context.propagate(this.blockChainNetwork.getContext());
 
         final String id = IDGenerator.randomUUID().toString();
         final Instant createdDate = Instant.now();
@@ -400,6 +406,7 @@ public class WalletService
             throw new WalletNotFoundException("wallet doesn't exist. id = " + walletId);
         }
 
+        Context.propagate(this.blockChainNetwork.getContext());
         MultisigWalletBalance balance = wallet.getWalletBalance();
         return balance;
     }
@@ -505,8 +512,7 @@ public class WalletService
             Integer numberOfBlock, Boolean usingBackupSigningKey, String memo, String internalId)
             throws ServiceNotReadyException, WalletNotFoundException, InvalidCoinSymbolException, InvalidPassphraseException,
             InvalidRecipientException, FeeRecordNotFoundException, CryptoException, InsufficientMoneyException,
-            RequestAlreadySignedException, BroadcastFailedException
-    {
+            RequestAlreadySignedException, BroadcastFailedException, InvalidTransactionException, SigningTransactionFailedException {
         if (!isServiceReady)
         {
             throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
@@ -569,6 +575,8 @@ public class WalletService
 
         this.addressRecordRepository.save(addressRecord);
 
+        Context.propagate(this.blockChainNetwork.getContext());
+
         Transaction transaction = new Transaction(networkParameters);
         for (Recipient recipient : recipients)
         {
@@ -579,6 +587,7 @@ public class WalletService
         MultisigSendRequest request = MultisigSendRequest.forTx(transaction);
         request.setFeePerKb(Coin.valueOf(feeRecord.getFeePerKb().longValue()));
         request.setChangeAddress(changeAddress);
+        request.setEnsureMinRequiredFee(false);
 
         TransactionSigner signers = this.restoreTransactionSigner(record, passphrase, usingBackupSigningKey);
         final String signedTransactionHex = wallet.buildAndSignTransaction(request, signers);
@@ -692,8 +701,7 @@ public class WalletService
     public synchronized SignedTransaction signTransaction(String walletId, String coinSymbol, List<Recipient> recipients,
             Passphrase passphrase, Integer numberOfBlock, Boolean usingBackupSigningKey, String memo, String internalId)
             throws ServiceNotReadyException, InsufficientMoneyException, WalletNotFoundException, InvalidCoinSymbolException,
-            FeeRecordNotFoundException, CryptoException, InvalidPassphraseException, InvalidRecipientException
-    {
+            FeeRecordNotFoundException, CryptoException, InvalidPassphraseException, InvalidRecipientException, SigningTransactionFailedException, RequestAlreadySignedException, InvalidTransactionException {
         if (!isServiceReady)
         {
             throw new ServiceNotReadyException("downloading blockchain data. service is not available now.");
@@ -756,6 +764,8 @@ public class WalletService
 
         this.addressRecordRepository.save(addressRecord);
 
+        Context.propagate(this.blockChainNetwork.getContext());
+
         Transaction transaction = new Transaction(networkParameters);
         for (Recipient recipient : recipients)
         {
@@ -766,6 +776,7 @@ public class WalletService
         MultisigSendRequest request = MultisigSendRequest.forTx(transaction);
         request.setFeePerKb(Coin.valueOf(feeRecord.getFeePerKb().longValue()));
         request.setChangeAddress(changeAddress);
+        request.setEnsureMinRequiredFee(false);
 
         TransactionSigner signers = this.restoreTransactionSigner(record, passphrase, usingBackupSigningKey);
         final String signedTransactionHex = wallet.buildAndSignTransaction(request, signers);
@@ -1195,10 +1206,6 @@ public class WalletService
                     }
                 }
             }
-            else
-            {
-                logger.debug("diff {} in transaction {} is smaller than 0.", diff, transactionId);
-            }
         }
 
     }
@@ -1224,9 +1231,6 @@ public class WalletService
                     transactionRecordRepository.findFirstByTransactionId(transactionId).orElse(null);
             if (transactionRecord == null)
             {
-                // somebody do withdrawl outside
-                logger.warn("a withdrawal transaction is received but it doesn't in our DB.");
-
                 TransactionRecord record = new TransactionRecord();
                 record.setId(IDGenerator.randomUUID().toString());
                 record.setTransactionId(transactionId);
@@ -1245,7 +1249,7 @@ public class WalletService
                 {
                     for (TransactionOutput output : outputs)
                     {
-                        if (output.isMineOrWatched(wallet))
+                        if (! output.isMineOrWatched(wallet))
                         {
                             final String address = output.getScriptPubKey().getToAddress(networkParameters).toString();
                             final int index = output.getIndex();
@@ -1269,20 +1273,17 @@ public class WalletService
                 transactionRecordRepository.save(record);
 
             }
-
             else
             {
-                if ((transactionRecord.getStatus() == TransactionStatus.UNCONFIRMED
-                        || transactionRecord.getStatus() == TransactionStatus.SIGNED)
-                        && !pendingTransactionCache.containsKey(transactionId))
+                if (transactionRecord.getStatus() == TransactionStatus.UNCONFIRMED)
                 {
-                    BTCTransaction btcTransaction = new BTCTransaction(wallet.getDescription(), transaction);
-                    btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
+                    if (!pendingTransactionCache.containsKey(transactionId))
+                    {
+                        BTCTransaction btcTransaction = new BTCTransaction(wallet.getDescription(), transaction);
+                        btcTransaction.addTransactionConfidenceListener(new BTCTransactionConfidenceEventListener());
 
-                    pendingTransactionCache.put(transactionId, btcTransaction);
-                    logger.warn(
-                            "a withdrawal transaction {} is received. status is unconfirmed. added to pending transaction pool.",
-                            transactionId);
+                        pendingTransactionCache.put(transactionId, btcTransaction);
+                    }
                 }
             }
         }
