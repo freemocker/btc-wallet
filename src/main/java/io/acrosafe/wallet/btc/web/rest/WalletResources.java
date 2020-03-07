@@ -49,7 +49,6 @@ import io.acrosafe.wallet.btc.exception.FeeRecordNotFoundException;
 import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
 import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
 import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
-import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
 import io.acrosafe.wallet.btc.exception.TransactionAlreadyBroadcastedException;
 import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
@@ -110,7 +109,7 @@ public class WalletResources
             response.setResult(Result.SERVICE_NOT_READY);
             return new ResponseEntity<>(response, HttpStatus.SERVICE_UNAVAILABLE);
         }
-        catch (InvalidSymbolException e)
+        catch (InvalidCoinSymbolException e)
         {
             response.setResultCode(Result.INVALID_COIN_SYMBOL.getCode());
             response.setResult(Result.INVALID_COIN_SYMBOL);

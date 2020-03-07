@@ -92,7 +92,6 @@ import io.acrosafe.wallet.btc.exception.FeeRecordNotFoundException;
 import io.acrosafe.wallet.btc.exception.InvalidCoinSymbolException;
 import io.acrosafe.wallet.btc.exception.InvalidPassphraseException;
 import io.acrosafe.wallet.btc.exception.InvalidRecipientException;
-import io.acrosafe.wallet.btc.exception.InvalidSymbolException;
 import io.acrosafe.wallet.btc.exception.ServiceNotReadyException;
 import io.acrosafe.wallet.btc.exception.TransactionAlreadyBroadcastedException;
 import io.acrosafe.wallet.btc.exception.WalletNotFoundException;
@@ -257,7 +256,7 @@ public class WalletService
     @Transactional
     public synchronized WalletRecord createWallet(String symbol, String label, Passphrase signingKeyPassphrase,
             Passphrase backupSigningKeyPassphrase, Boolean enabled)
-            throws ServiceNotReadyException, InvalidSymbolException, InvalidPassphraseException, CryptoException
+            throws ServiceNotReadyException, InvalidCoinSymbolException, InvalidPassphraseException, CryptoException
     {
         if (!isServiceReady)
         {
@@ -266,7 +265,7 @@ public class WalletService
 
         if (StringUtils.isEmpty(symbol) || !symbol.equalsIgnoreCase(COIN_SYMBOL))
         {
-            throw new InvalidSymbolException("coin symbol is not valid.");
+            throw new InvalidCoinSymbolException("coin symbol is not valid.");
         }
 
         if (signingKeyPassphrase == null || StringUtils.isEmpty(signingKeyPassphrase.getStringValue()))
