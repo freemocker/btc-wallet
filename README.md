@@ -1,4 +1,4 @@
-# btc-wallet
+# btc-wallet (v1 ready)
 Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any problem, please open an issue.
 
 ## Setup Development Environment
