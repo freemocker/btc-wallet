@@ -270,20 +270,29 @@ public class WalletResources
             {
                 for (WalletRecord wallet : wallets)
                 {
-                    final String walletId = wallet.getId();
-                    MultisigWalletBalance multisigWalletBalance = this.service.getBalance(walletId);
-
-                    Balance balance = new Balance();
-                    balance.setEstimated(multisigWalletBalance.getEstimated());
-                    balance.setAvailable(multisigWalletBalance.getAvailable());
-
                     GetWalletResponse response = new GetWalletResponse();
+                    final String walletId = wallet.getId();
+                    try
+                    {
+                        MultisigWalletBalance multisigWalletBalance = this.service.getBalance(walletId);
+
+                        Balance balance = new Balance();
+                        balance.setEstimated(multisigWalletBalance.getEstimated());
+                        balance.setAvailable(multisigWalletBalance.getAvailable());
+
+                        response.setBalance(balance);
+                    }
+                    catch (WalletNotFoundException e)
+                    {
+                        // if wallet is disabled, it won't be in the cache. we don't have to show balance in this case.
+                    }
+
                     response.setId(walletId);
                     response.setCreatedDate(wallet.getCreatedDate());
                     response.setEnabled(wallet.isEnabled());
                     response.setLabel(wallet.getLabel());
                     responses.addWallet(response);
-                    response.setBalance(balance);
+
                 }
             }
 
