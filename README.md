@@ -1,5 +1,5 @@
 # btc-wallet (V1 ready)
-Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any problem, please open an issue.
+Spring Boot based 2-of-3 multisig wallet implementation for BTC. If you find any problem, please open an issue. or you can contact sam@acrosafe.io.
 
 ## Setup Development Environment
 1. Install PostgreSQL and Java 8.
